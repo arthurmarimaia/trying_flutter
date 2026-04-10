@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'controllers/pet_controller.dart';
+import 'screens/home_screen.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => PetController()..init(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -9,28 +17,26 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: HomeScreen(),
-    );
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tamagotchi'),
-      ),
-      body: const Center(
-        child: Text(
-          'Projeto iniciado',
-          style: TextStyle(fontSize: 24),
-        ),
-      ),
+    return Consumer<PetController>(
+      builder: (context, controller, _) {
+        return MaterialApp(
+          title: 'Tamagotchi',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData.from(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData.from(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.deepPurple,
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+          ),
+          themeMode: controller.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          home: const HomeScreen(),
+        );
+      },
     );
   }
 }
