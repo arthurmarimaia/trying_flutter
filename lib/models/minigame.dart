@@ -1,4 +1,4 @@
-enum GameType { memory, speed, jump }
+enum GameType { memory, speed, jump, reaction }
 
 enum GameDifficulty { easy, medium, hard }
 
@@ -58,6 +58,7 @@ class MiniGameStats {
     GameType.memory: 0,
     GameType.speed: 0,
     GameType.jump: 0,
+    GameType.reaction: 0,
   };
 
   MiniGameStats();

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controllers/pet_controller.dart';
 import '../models/store_item.dart';
+import '../services/locale_controller.dart';
 
 class InventoryScreen extends StatelessWidget {
   const InventoryScreen({super.key});
@@ -9,6 +10,7 @@ class InventoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Provider.of<PetController>(context);
+    final s = context.watch<LocaleController>().s;
 
     // Only consumable items that the player holds at least 1 of
     final consumables = controller.storeItems
@@ -21,7 +23,7 @@ class InventoryScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('🎒 Inventário'),
+        title: Text('🎒 ${s.inventoryTitle}'),
         backgroundColor: Colors.teal.shade700,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -81,7 +83,7 @@ class _InventoryHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$totalSlots item${totalSlots == 1 ? '' : 'ns'} guardado${totalSlots == 1 ? '' : 's'}',
+            '$totalSlots item${totalSlots == 1 ? '' : 's'} ${context.watch<LocaleController>().isPt ? 'guardado${totalSlots == 1 ? '' : 's'}' : 'stored'}',
             style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -89,7 +91,9 @@ class _InventoryHeader extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Use itens para ajudar seu pet na hora certa!',
+            context.watch<LocaleController>().isPt
+                ? 'Use itens para ajudar seu pet na hora certa!'
+                : 'Use items to help your pet at the right time!',
             style:
                 const TextStyle(color: Colors.white70, fontSize: 13),
           ),
@@ -111,7 +115,7 @@ class _EmptyInventory extends StatelessWidget {
           const Text('🎒', style: TextStyle(fontSize: 64)),
           const SizedBox(height: 16),
           Text(
-            'Inventário vazio',
+            context.watch<LocaleController>().s.inventoryEmpty,
             style: Theme.of(context)
                 .textTheme
                 .titleMedium
@@ -119,7 +123,9 @@ class _EmptyInventory extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Compre consumíveis na loja!',
+            context.watch<LocaleController>().isPt
+                ? 'Compre consumíveis na loja!'
+                : 'Buy consumables at the store!',
             style: Theme.of(context)
                 .textTheme
                 .bodySmall
@@ -251,7 +257,7 @@ class _InventoryItemTile extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: onUse,
-              child: const Text('Usar'),
+              child: Text(context.watch<LocaleController>().s.inventoryUse),
             ),
           ],
         ),

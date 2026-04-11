@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controllers/pet_controller.dart';
 import '../models/daily_quest.dart';
+import '../services/locale_controller.dart';
 
 class DailyQuestsScreen extends StatelessWidget {
   const DailyQuestsScreen({super.key});
@@ -10,10 +11,11 @@ class DailyQuestsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final controller = context.watch<PetController>();
+    final s = context.watch<LocaleController>().s;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Missões Diárias 📋'),
+        title: Text('${s.questsTitle} 📋'),
         centerTitle: true,
       ),
       body: Container(
@@ -49,16 +51,16 @@ class DailyQuestsScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Resumo de Missões',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    Text(
+                      s.questsSummary,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Ativas: ${controller.dailyQuestsActive.length}'),
-                        Text('Completas: ${controller.dailyQuestsCompleted.length}'),
+                        Text('${s.questsActiveLabel}: ${controller.dailyQuestsActive.length}'),
+                        Text('${s.questsCompletedLabel}: ${controller.dailyQuestsCompleted.length}'),
                       ],
                     ),
                   ],
@@ -69,7 +71,7 @@ class DailyQuestsScreen extends StatelessWidget {
               // Active Quests
               if (controller.dailyQuestsActive.isNotEmpty) ...[
                 Text(
-                  'Missões Ativas',
+                  s.questsActiveMissions,
                   style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
@@ -80,7 +82,7 @@ class DailyQuestsScreen extends StatelessWidget {
               // Completed Quests
               if (controller.dailyQuestsCompleted.isNotEmpty) ...[
                 Text(
-                  'Missões Completas',
+                  s.questsCompletedMissions,
                   style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
@@ -96,11 +98,11 @@ class DailyQuestsScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(32),
                     child: Column(
                       children: [
-                        const Text('📭 Nenhuma missão disponível', textAlign: TextAlign.center),
+                        Text(s.questsEmpty, textAlign: TextAlign.center),
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text('Voltar'),
+                          child: Text(s.back),
                         ),
                       ],
                     ),
@@ -127,6 +129,7 @@ class _QuestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final controller = context.read<PetController>();
+    final s = context.watch<LocaleController>().s;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -151,12 +154,12 @@ class _QuestCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      quest.title,
+                      s.questTitleById(quest.id),
                       style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      quest.description,
+                      s.questDescriptionById(quest.id),
                       style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
                     ),
                   ],
@@ -213,9 +216,9 @@ class _QuestCard extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.amber,
                 ),
-                child: const Text(
-                  'Coletar Recompensa',
-                  style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                child: Text(
+                  context.watch<LocaleController>().s.questClaim,
+                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
                 ),
               ),
             ),

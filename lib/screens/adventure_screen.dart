@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import '../models/adventure.dart';
 import '../controllers/pet_controller.dart';
+import '../services/locale_controller.dart';
 
 class AdventureScreen extends StatefulWidget {
   final Adventure? currentAdventure;
@@ -44,8 +45,25 @@ class _AdventureScreenState extends State<AdventureScreen> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(AdventureScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final wasActive = oldWidget.currentAdventure?.isActive ?? false;
+    final isActive = widget.currentAdventure?.isActive ?? false;
+    if (isActive && !wasActive && progressTimer == null) {
+      progressTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+        if (widget.currentAdventure?.shouldComplete ?? false) {
+          widget.onAdventureComplete();
+        }
+        setState(() {});
+      });
+    } else if (!isActive && wasActive) {
+      progressTimer?.cancel();
+      progressTimer = null;
+    }
+  }
+
   void _startAdventure(Adventure adventure) {
-    adventure.startAdventure();
     widget.onAdventureStart(adventure);
     setState(() {
       progressTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
@@ -62,10 +80,11 @@ class _AdventureScreenState extends State<AdventureScreen> {
     final theme = Theme.of(context);
     final hasActiveAdventure = widget.currentAdventure?.isActive ?? false;
     final controller = context.watch<PetController>();
+    final s = context.watch<LocaleController>().s;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Aventuras 🌍'),
+        title: Text('${s.adventureTitle} 🌍'),
         centerTitle: true,
       ),
       body: Container(
@@ -89,7 +108,7 @@ class _AdventureScreenState extends State<AdventureScreen> {
                 )
               else ...[
                 Text(
-                  'Escolha uma Aventura',
+                  s.advChooseAdventure,
                   style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
@@ -107,7 +126,7 @@ class _AdventureScreenState extends State<AdventureScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          controller.adventureHint,
+                          s.adventureHint(controller.adventureHint),
                           style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
                         ),
                       ),
@@ -126,7 +145,7 @@ class _AdventureScreenState extends State<AdventureScreen> {
               const SizedBox(height: 24),
               if (widget.adventureLog.completedAdventures.isNotEmpty) ...[
                 Text(
-                  'Histórico de Aventuras',
+                  s.advHistory,
                   style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
@@ -160,7 +179,7 @@ class _AdventureScreenState extends State<AdventureScreen> {
                       Text('${adv.emoji} ${adv.name}'),
                       if (adv.treasureItem != null)
                         Text(
-                          'Tesouro: ${adv.treasureItem}',
+                          '${context.read<LocaleController>().s.advTreasure}: ${adv.treasureItem}',
                           style: const TextStyle(fontSize: 12, color: Colors.amber),
                         ),
                     ],
@@ -186,6 +205,7 @@ class _ActiveAdventureCard extends StatelessWidget {
     final theme = Theme.of(context);
     final progress = adventure.progressPercent;
     final timeRemaining = adventure.totalDurationSeconds - adventure.timeElapsedSeconds;
+    final s = context.watch<LocaleController>().s;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -212,7 +232,7 @@ class _ActiveAdventureCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Aventura em andamento!',
+            s.advInProgress,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -246,13 +266,13 @@ class _ActiveAdventureCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            adventure.name,
+            s.adventureName(adventure.id),
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium?.copyWith(color: Colors.white),
           ),
           const SizedBox(height: 8),
           Text(
-            'Tempo restante: ${(timeRemaining ~/ 60).toString().padLeft(2, '0')}:${(timeRemaining % 60).toString().padLeft(2, '0')}',
+            '${s.advTimeRemaining}: ${(timeRemaining ~/ 60).toString().padLeft(2, '0')}:${(timeRemaining % 60).toString().padLeft(2, '0')}',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
           ),
@@ -265,16 +285,16 @@ class _ActiveAdventureCard extends StatelessWidget {
             ),
             child: Column(
               children: [
-                const Text('Possíveis Prêmios:', style: TextStyle(fontSize: 12, color: Colors.white70)),
+                Text(s.advPossibleRewards, style: const TextStyle(fontSize: 12, color: Colors.white70)),
                 const SizedBox(height: 4),
                 Text(
-                  '💰 ${adventure.minCoinsReward} - ${adventure.maxCoinsReward} moedas',
+                  '💰 ${adventure.minCoinsReward} - ${adventure.maxCoinsReward} ${s.storeCoins}',
                   style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber),
                 ),
                 if (adventure.possibleItems.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
-                    'Itens: ${adventure.possibleItems.join(' ')}',
+                    '${s.advItems}: ${adventure.possibleItems.join(' ')}',
                     style: const TextStyle(fontSize: 12, color: Colors.white70),
                   ),
                 ],
@@ -301,6 +321,7 @@ class _AdventureSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final s = context.watch<LocaleController>().s;
 
     return GestureDetector(
       onTap: onTap,
@@ -340,14 +361,14 @@ class _AdventureSelector extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    adventure.name,
+                    s.adventureName(adventure.id),
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
                   Text(
-                    adventure.description,
+                    s.adventureDescription(adventure.id),
                     style: theme.textTheme.bodySmall?.copyWith(color: Colors.white70),
                   ),
                   const SizedBox(height: 8),

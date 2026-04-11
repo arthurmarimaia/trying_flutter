@@ -21,6 +21,10 @@ class Achievement {
   DateTime? unlockedAt;
   final int coinsReward;
   final int xpReward;
+  /// Optional store item id granted automatically on unlock.
+  final String? itemReward;
+  /// Optional title string unlocked and displayable on profile.
+  final String? titleReward;
 
   Achievement({
     required this.id,
@@ -34,6 +38,8 @@ class Achievement {
     this.unlockedAt,
     this.coinsReward = 0,
     this.xpReward = 0,
+    this.itemReward,
+    this.titleReward,
   });
 
   double get progressPercent => (currentProgress / goal).clamp(0.0, 1.0);
@@ -64,6 +70,8 @@ class Achievement {
         'unlockedAt': unlockedAt?.toIso8601String(),
         'coinsReward': coinsReward,
         'xpReward': xpReward,
+        'itemReward': itemReward,
+        'titleReward': titleReward,
       };
 
   factory Achievement.fromMap(Map<String, dynamic> map) {
@@ -78,6 +86,8 @@ class Achievement {
       unlocked: map['unlocked'] as bool? ?? false,
       coinsReward: map['coinsReward'] as int? ?? 0,
       xpReward: map['xpReward'] as int? ?? 0,
+      itemReward: map['itemReward'] as String?,
+      titleReward: map['titleReward'] as String?,
     );
     if (map['unlockedAt'] != null) {
       a.unlockedAt = DateTime.parse(map['unlockedAt'] as String);
@@ -106,16 +116,19 @@ class Achievement {
           goal: 50,
           coinsReward: 150,
           xpReward: 75,
+          itemReward: 'coleira_luz',
+          titleReward: 'Jogador',
         ),
         Achievement(
           id: 'games_100',
           type: AchievementType.gamesPlayed,
           title: 'Viciado',
           description: 'Jogue 100 minigames',
-          emoji: '🏅',
+          emoji: '🎖️',
           goal: 100,
           coinsReward: 300,
           xpReward: 150,
+          titleReward: 'Viciado em Jogos',
         ),
         // Adventures
         Achievement(
@@ -137,6 +150,8 @@ class Achievement {
           goal: 10,
           coinsReward: 200,
           xpReward: 100,
+          itemReward: 'chapelinho',
+          titleReward: 'Grande Explorador',
         ),
         // Coins
         Achievement(
@@ -158,6 +173,7 @@ class Achievement {
           goal: 5000,
           coinsReward: 500,
           xpReward: 200,
+          titleReward: 'Milionário',
         ),
         // Level
         Achievement(
@@ -169,6 +185,7 @@ class Achievement {
           goal: 5,
           coinsReward: 100,
           xpReward: 50,
+          itemReward: 'wizard_hat',
         ),
         Achievement(
           id: 'level_10',
@@ -179,6 +196,7 @@ class Achievement {
           goal: 10,
           coinsReward: 300,
           xpReward: 100,
+          titleReward: 'Campeão',
         ),
         // Evolutions
         Achievement(
@@ -200,6 +218,8 @@ class Achievement {
           goal: 4,
           coinsReward: 500,
           xpReward: 250,
+          itemReward: 'alien_helmet',
+          titleReward: 'Ser Lendário',
         ),
         // Quests
         Achievement(
@@ -231,8 +251,8 @@ class Achievement {
           emoji: '💎',
           goal: 7,
           coinsReward: 300,
-          xpReward: 150,
-        ),
+          xpReward: 150,          itemReward: 'ninja_mask',
+          titleReward: 'Guardião Fiel',        ),
         // Happiness
         Achievement(
           id: 'happy_80',

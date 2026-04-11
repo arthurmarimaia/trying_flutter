@@ -5,6 +5,7 @@ import 'dart:math';
 
 import '../../controllers/pet_controller.dart';
 import '../../models/minigame.dart';
+import '../../services/locale_controller.dart';
 
 class MemoryGameScreen extends StatefulWidget {
   final GameDifficulty difficulty;
@@ -131,13 +132,13 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     if (completed) {
       final timeBonus = max(0, 300 - stopwatch.elapsedMilliseconds ~/ 1000);
       int baseReward = widget.difficulty == GameDifficulty.easy
-          ? 50
+          ? 12
           : widget.difficulty == GameDifficulty.medium
-              ? 100
-              : 200;
+              ? 22
+              : 40;
 
-      coinsReward = ((baseReward + timeBonus ~/ 2) * controller.minigameRewardMultiplier).round();
-      xpReward = ((baseReward + timeBonus) * controller.minigameRewardMultiplier).round();
+      coinsReward = ((baseReward + timeBonus ~/ 6) * controller.minigameRewardMultiplier).round();
+      xpReward = ((baseReward + timeBonus ~/ 3) * controller.minigameRewardMultiplier).round();
     }
 
     final result = GameResult(
@@ -152,21 +153,22 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
     );
 
     if (mounted) {
+      final s = context.read<LocaleController>().s;
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(
-          title: Text(completed ? '🎉 Parabéns!' : '⏱️ Tempo Esgotado!'),
+          title: Text(completed ? s.mgCongrats : s.mgTimeUp),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Movimentos: $moves'),
-              Text('Tempo: ${(stopwatch.elapsedMilliseconds ~/ 1000).toString()}s'),
+              Text('${s.mgMovesLabel}: $moves'),
+              Text('${s.mgTimeLabel}: ${(stopwatch.elapsedMilliseconds ~/ 1000).toString()}s'),
               const SizedBox(height: 12),
-              Text('💰 Moedas: +$coinsReward'),
+              Text('${s.mgCoinsLabel}: +$coinsReward'),
               Text('⭐ XP: +$xpReward'),
-              Text('😊 Felicidade: +${result.happinessReward}'),
+              Text('${s.mgHappinessLabel}: +${result.happinessReward}'),
             ],
           ),
           actions: [
@@ -190,7 +192,7 @@ class _MemoryGameScreenState extends State<MemoryGameScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Jogo da Memória'),
+        title: Text(context.watch<LocaleController>().s.mgMemoryTitle),
         centerTitle: true,
         actions: [
           Padding(

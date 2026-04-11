@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controllers/pet_controller.dart';
 import '../models/achievement.dart';
+import '../services/locale_controller.dart';
 
 class AchievementsScreen extends StatelessWidget {
   const AchievementsScreen({super.key});
@@ -11,10 +12,11 @@ class AchievementsScreen extends StatelessWidget {
     final controller = Provider.of<PetController>(context);
     final achievements = controller.playerAchievements;
     final unlocked = achievements.where((a) => a.unlocked).length;
+    final s = context.watch<LocaleController>().s;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('🏅 Conquistas'),
+        title: Text('🏅 ${s.achievementsTitle}'),
         backgroundColor: Colors.amber.shade700,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -58,7 +60,7 @@ class _SummaryHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$unlocked / $total desbloqueadas',
+            '$unlocked / $total ${context.watch<LocaleController>().s.achievementsTitle.toLowerCase()}',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
@@ -77,7 +79,7 @@ class _SummaryHeader extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '${(percent * 100).toStringAsFixed(0)}% completo',
+            '${(percent * 100).toStringAsFixed(0)}% ${context.watch<LocaleController>().s.achievementsComplete}',
             style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
         ],
@@ -95,6 +97,7 @@ class _AchievementCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final a = achievement;
     final isNew = a.justUnlocked;
+    final s = context.watch<LocaleController>().s;
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 5),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -130,7 +133,7 @@ class _AchievementCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          a.title,
+                          s.achievementTitleById(a.id),
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
@@ -160,7 +163,7 @@ class _AchievementCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    a.description,
+                    s.achievementDescriptionById(a.id),
                     style: TextStyle(
                         fontSize: 12,
                         color: a.unlocked
@@ -204,11 +207,71 @@ class _AchievementCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                  // Item / title rewards preview
+                  if (a.itemReward != null || a.titleReward != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Wrap(
+                        spacing: 6,
+                        children: [
+                          if (a.itemReward != null)
+                            _RewardChip(
+                              label: a.itemReward!,
+                              icon: Icons.checkroom,
+                              unlocked: a.unlocked,
+                              color: Colors.purple,
+                            ),
+                          if (a.titleReward != null)
+                            _RewardChip(
+                              label: '"${a.titleReward!}"',
+                              icon: Icons.title,
+                              unlocked: a.unlocked,
+                              color: Colors.indigo,
+                            ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _RewardChip extends StatelessWidget {
+  const _RewardChip({
+    required this.label,
+    required this.icon,
+    required this.unlocked,
+    required this.color,
+  });
+  final String label;
+  final IconData icon;
+  final bool unlocked;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = unlocked ? color : Colors.grey.shade400;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: c.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: c),
+          const SizedBox(width: 3),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 10, color: c, fontWeight: FontWeight.w600)),
+        ],
       ),
     );
   }

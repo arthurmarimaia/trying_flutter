@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/pet_evolution.dart';
 import '../controllers/pet_controller.dart';
+import '../services/locale_controller.dart';
 
 class EvolutionScreen extends StatelessWidget {
   final PetForm currentForm;
@@ -37,10 +38,11 @@ class EvolutionScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final availableForms = _getAvailableForms();
     final controller = context.watch<PetController>();
+    final s = context.watch<LocaleController>().s;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Evoluções 🔄'),
+        title: Text('${s.evolutionTitle} 🔄'),
         centerTitle: true,
       ),
       body: Container(
@@ -75,9 +77,9 @@ class EvolutionScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    const Text(
-                      'Forma Atual',
-                      style: TextStyle(fontSize: 14, color: Colors.white70),
+                    Text(
+                      s.evoCurrentForm,
+                      style: const TextStyle(fontSize: 14, color: Colors.white70),
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -85,7 +87,7 @@ class EvolutionScreen extends StatelessWidget {
                       style: const TextStyle(fontSize: 80),
                     ),
                     Text(
-                      PetEvolution.fromForm(currentForm).displayName,
+                      s.evoFormName(currentForm),
                       style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -106,7 +108,7 @@ class EvolutionScreen extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        controller.evolutionHint,
+                        s.evolutionHint(controller.evolutionHint),
                         style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
                       ),
                     ),
@@ -117,7 +119,7 @@ class EvolutionScreen extends StatelessWidget {
 
               // Stats Display
               Text(
-                'Suas Estatísticas',
+                s.evoYourStats,
                 style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
@@ -131,17 +133,17 @@ class EvolutionScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _StatRow('📍 Nível', '$petLevel'),
+                    _StatRow('📍 ${s.evoStatLevel}', '$petLevel'),
                     const SizedBox(height: 8),
-                    _StatRow('❤️ Saúde', '${petStats['health'] ?? 0}'),
+                    _StatRow('❤️ ${s.evoStatHealth}', '${petStats['health'] ?? 0}'),
                     const SizedBox(height: 8),
-                    _StatRow('😊 Felicidade', '${petStats['happiness'] ?? 0}'),
+                    _StatRow('😊 ${s.evoStatHappiness}', '${petStats['happiness'] ?? 0}'),
                     const SizedBox(height: 8),
-                    _StatRow('⚡ Energia', '${petStats['energy'] ?? 0}'),
+                    _StatRow('⚡ ${s.evoStatEnergy}', '${petStats['energy'] ?? 0}'),
                     const SizedBox(height: 8),
-                    _StatRow('🍖 Fome', '${petStats['hunger'] ?? 0}'),
+                    _StatRow('🍖 ${s.evoStatHunger}', '${petStats['hunger'] ?? 0}'),
                     const SizedBox(height: 8),
-                    _StatRow('💪 Força', '${petStats['strength'] ?? 0}'),
+                    _StatRow('💪 ${s.evoStatStrength}', '${petStats['strength'] ?? 0}'),
                   ],
                 ),
               ),
@@ -149,7 +151,7 @@ class EvolutionScreen extends StatelessWidget {
 
               // Available Evolutions
               Text(
-                'Formas Disponíveis',
+                s.evoAvailableForms,
                 style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
@@ -174,15 +176,16 @@ class EvolutionScreen extends StatelessWidget {
                             barrierDismissible: false,
                             barrierColor: Colors.black87,
                             transitionDuration: Duration.zero,
-                            pageBuilder: (ctx, _, __) => _EvolutionCelebration(
+                            pageBuilder: (ctx, animation, secondaryAnimation) => _EvolutionCelebration(
                               emoji: evolution.displayEmoji,
-                              name: evolution.displayName,
+                              name: s.evoFormName(evolution.currentForm),
                             ),
                           );
                           if (!context.mounted) return;
+                          final sSnap = context.read<LocaleController>().s;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Evoluiu para ${evolution.displayName}!'),
+                              content: Text('${sSnap.evoEvolvedTo} ${sSnap.evoFormName(evolution.currentForm)}!'),
                               backgroundColor: Colors.green,
                               duration: const Duration(seconds: 2),
                             ),
@@ -244,6 +247,7 @@ class _EvolutionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final s = context.watch<LocaleController>().s;
     final bgColor = isCurrentForm
         ? Colors.amber.withAlpha(150)
         : canEvolve
@@ -276,16 +280,16 @@ class _EvolutionCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    evolution.displayName,
+                    s.evoFormName(evolution.currentForm),
                     style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   if (!canEvolve) ...[
                     Text(
-                      'Requisitos não atendidos:',
+                      s.evoRequirementsNotMet,
                       style: theme.textTheme.bodySmall?.copyWith(color: Colors.red),
                     ),
-                    ..._getMissingRequirements().map(
+                    ..._getMissingRequirements(s).map(
                       (req) => Text(
                         '❌ $req',
                         style: theme.textTheme.bodySmall?.copyWith(color: Colors.red),
@@ -293,12 +297,12 @@ class _EvolutionCard extends StatelessWidget {
                     ),
                   ] else if (isCurrentForm)
                     Text(
-                      'Forma atual ✓',
+                      s.evoCurrentFormCheck,
                       style: theme.textTheme.bodySmall?.copyWith(color: Colors.orange),
                     )
                   else
                     Text(
-                      'Pronto para evoluir!',
+                      s.evoReadyToEvolve,
                       style: theme.textTheme.bodySmall?.copyWith(color: Colors.green),
                     ),
                 ],
@@ -314,24 +318,24 @@ class _EvolutionCard extends StatelessWidget {
     );
   }
 
-  List<String> _getMissingRequirements() {
-    const statLabels = {
-      'health': 'Saúde',
-      'happiness': 'Felicidade',
-      'energy': 'Energia',
-      'hunger': 'Fome',
-      'experience': 'Experiência',
-      'strength': 'Força',
-      'gamesPlayed': 'Minigames jogados',
-      'totalAdventures': 'Aventuras completas',
-      'coins': 'Moedas',
-      'loginStreak': 'Dias seguidos',
+  List<String> _getMissingRequirements(AppStrings s) {
+    final statLabels = {
+      'health': s.evoStatHealth,
+      'happiness': s.evoStatHappiness,
+      'energy': s.evoStatEnergy,
+      'hunger': s.evoStatHunger,
+      'experience': s.evoStatExperience,
+      'strength': s.evoStatStrength,
+      'gamesPlayed': s.evoStatGamesPlayed,
+      'totalAdventures': s.evoStatAdventures,
+      'coins': s.evoStatCoins,
+      'loginStreak': s.evoStatLoginStreak,
     };
 
     final missing = <String>[];
 
     if (petLevel < evolution.levelRequired) {
-      missing.add('Nível ${evolution.levelRequired} (atual: $petLevel)');
+      missing.add('${s.evoStatLevel} ${evolution.levelRequired} (${s.evoCurrentLabel}: $petLevel)');
     }
 
     for (final entry in evolution.statRequirements.entries) {
@@ -346,7 +350,7 @@ class _EvolutionCard extends StatelessWidget {
       final currentVal = petStats[entry.key] ?? 0;
       if (currentVal > entry.value) {
         final label = statLabels[entry.key] ?? entry.key;
-        missing.add('$label ≤ ${entry.value} (atual: $currentVal)');
+        missing.add('$label ≤ ${entry.value} (${s.evoCurrentLabel}: $currentVal)');
       }
     }
 
@@ -360,7 +364,7 @@ class _EvolutionCard extends StatelessWidget {
 
     if (evolution.requiredAccessoryId != null &&
         selectedAccessory != evolution.requiredAccessoryId) {
-      missing.add('Acessório equipado: ${evolution.requiredAccessoryId}');
+      missing.add('${s.evoRequiredAccessory}: ${evolution.requiredAccessoryId}');
     }
 
     return missing;
@@ -442,10 +446,13 @@ class _EvolutionCelebrationState extends State<_EvolutionCelebration>
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Evolução completa!',
-            style: TextStyle(color: Colors.white70, fontSize: 16),
-          ),
+          Builder(builder: (ctx) {
+            final st = ctx.watch<LocaleController>().s;
+            return Text(
+              st.evoCelebrationText,
+              style: const TextStyle(color: Colors.white70, fontSize: 16),
+            );
+          }),
         ],
       ),
     );

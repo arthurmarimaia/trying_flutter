@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controllers/pet_controller.dart';
 import '../models/minigame.dart';
+import '../services/locale_controller.dart';
 import 'minigames/memory_game_screen.dart';
 import 'minigames/speed_game_screen.dart';
 import 'minigames/jump_game_screen.dart';
+import 'minigames/reaction_game_screen.dart';
 
 class MiniGamesScreen extends StatefulWidget {
   final Function(GameResult) onGameComplete;
@@ -25,14 +27,6 @@ class _MiniGamesScreenState extends State<MiniGamesScreen> {
 
   void _handleGameEnd(GameResult result) {
     widget.onGameComplete(result);
-    widget.stats.totalGamesPlayed++;
-    widget.stats.totalCoinsEarned += result.coinsReward;
-    widget.stats.totalXpEarned += result.xpReward;
-    
-    final currentBest = widget.stats.bestScores[result.type] ?? 0;
-    if (result.score > currentBest) {
-      widget.stats.bestScores[result.type] = result.score;
-    }
   }
 
   void _startGame(GameType gameType) {
@@ -54,6 +48,11 @@ class _MiniGamesScreenState extends State<MiniGamesScreen> {
           difficulty: selectedDifficulty,
           onGameEnd: _handleGameEnd,
         );
+      case GameType.reaction:
+        gameScreen = ReactionGameScreen(
+          difficulty: selectedDifficulty,
+          onGameEnd: _handleGameEnd,
+        );
     }
 
     Navigator.push(context, MaterialPageRoute(builder: (_) => gameScreen));
@@ -63,10 +62,11 @@ class _MiniGamesScreenState extends State<MiniGamesScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final controller = context.watch<PetController>();
+    final s = context.watch<LocaleController>().s;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mini-Games 🎮'),
+        title: Text(s.mgTitle),
         centerTitle: true,
       ),
       body: Container(
@@ -102,12 +102,12 @@ class _MiniGamesScreenState extends State<MiniGamesScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('📊 Suas Estatísticas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(s.mgStatsHeader, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Jogos: ${widget.stats.totalGamesPlayed}'),
+                        Text('${s.mgGamesLabel}: ${widget.stats.totalGamesPlayed}'),
                         Text('💰 ${widget.stats.totalCoinsEarned}'),
                         Text('⭐ ${widget.stats.totalXpEarned}'),
                       ],
@@ -118,13 +118,13 @@ class _MiniGamesScreenState extends State<MiniGamesScreen> {
               const SizedBox(height: 24),
 
               // Difficulty Selector
-              Text('Nível de Dificuldade', style: theme.textTheme.titleMedium),
+              Text(s.mgDifficulty, style: theme.textTheme.titleMedium),
               const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: _DifficultyButton(
-                      label: 'Fácil',
+                      label: s.mgEasy,
                       isSelected: selectedDifficulty == GameDifficulty.easy,
                       onTap: () => setState(() => selectedDifficulty = GameDifficulty.easy),
                     ),
@@ -132,7 +132,7 @@ class _MiniGamesScreenState extends State<MiniGamesScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _DifficultyButton(
-                      label: 'Normal',
+                      label: s.mgNormal,
                       isSelected: selectedDifficulty == GameDifficulty.medium,
                       onTap: () => setState(() => selectedDifficulty = GameDifficulty.medium),
                     ),
@@ -140,7 +140,7 @@ class _MiniGamesScreenState extends State<MiniGamesScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _DifficultyButton(
-                      label: 'Difícil',
+                      label: s.mgHard,
                       isSelected: selectedDifficulty == GameDifficulty.hard,
                       onTap: () => setState(() => selectedDifficulty = GameDifficulty.hard),
                     ),
@@ -164,7 +164,7 @@ class _MiniGamesScreenState extends State<MiniGamesScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          controller.minigameHint,
+                          s.minigameHint(controller.minigameHint),
                           style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
                         ),
                       ),
@@ -186,7 +186,7 @@ class _MiniGamesScreenState extends State<MiniGamesScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Bônus de minigame: x${controller.minigameRewardMultiplier.toStringAsFixed(2)}',
+                        '${s.mgBonusMultiplier}: x${controller.minigameRewardMultiplier.toStringAsFixed(2)}',
                         style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
                       ),
                     ),
@@ -195,30 +195,42 @@ class _MiniGamesScreenState extends State<MiniGamesScreen> {
               ),
 
               // Games
-              Text('Escolha um Jogo', style: theme.textTheme.titleMedium),
+              Text(s.mgChooseGame, style: theme.textTheme.titleMedium),
               const SizedBox(height: 16),
               _GameCard(
-                title: 'Jogo da Memória',
+                title: s.mgMemoryTitle,
                 emoji: '🧠',
-                description: 'Encontre os pares de cartas!',
+                description: s.mgMemoryDesc,
                 bestScore: widget.stats.bestScores[GameType.memory] ?? 0,
+                bestLabel: s.mgBestPrefix,
                 onTap: () => _startGame(GameType.memory),
               ),
               const SizedBox(height: 12),
               _GameCard(
-                title: 'Jogo de Velocidade',
+                title: s.mgSpeedTitle,
                 emoji: '⚡',
-                description: 'Clique no botão certo!',
+                description: s.mgSpeedDesc,
                 bestScore: widget.stats.bestScores[GameType.speed] ?? 0,
+                bestLabel: s.mgBestPrefix,
                 onTap: () => _startGame(GameType.speed),
               ),
               const SizedBox(height: 12),
               _GameCard(
-                title: 'Jogo de Salto',
+                title: s.mgJumpTitle,
                 emoji: '🐕',
-                description: 'Pule de plataforma em plataforma!',
+                description: s.mgJumpDesc,
                 bestScore: widget.stats.bestScores[GameType.jump] ?? 0,
+                bestLabel: s.mgBestPrefix,
                 onTap: () => _startGame(GameType.jump),
+              ),
+              const SizedBox(height: 12),
+              _GameCard(
+                title: s.mgReactionTitle,
+                emoji: '⚡',
+                description: s.mgReactionDesc,
+                bestScore: widget.stats.bestScores[GameType.reaction] ?? 0,
+                bestLabel: s.mgBestPrefix,
+                onTap: () => _startGame(GameType.reaction),
               ),
               const SizedBox(height: 20),
             ],
@@ -273,6 +285,7 @@ class _GameCard extends StatelessWidget {
   final String emoji;
   final String description;
   final int bestScore;
+  final String bestLabel;
   final VoidCallback onTap;
 
   const _GameCard({
@@ -280,6 +293,7 @@ class _GameCard extends StatelessWidget {
     required this.emoji,
     required this.description,
     required this.bestScore,
+    required this.bestLabel,
     required this.onTap,
   });
 
@@ -333,7 +347,7 @@ class _GameCard extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(top: 4.0),
                       child: Text(
-                        'Melhor: $bestScore',
+                        '$bestLabel: $bestScore',
                         style: theme.textTheme.bodySmall?.copyWith(color: Colors.amber),
                       ),
                     ),

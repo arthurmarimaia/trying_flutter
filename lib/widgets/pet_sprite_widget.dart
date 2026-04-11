@@ -2,35 +2,65 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+enum PetVisualState { normal, happy, sick, sleeping, fainted }
+
 class PetSpriteWidget extends StatefulWidget {
   final List<String> spriteAssets;
   final double size;
-  final Duration frameDuration;
+  final PetVisualState state;
 
   const PetSpriteWidget({
     super.key,
     required this.spriteAssets,
     this.size = 96,
-    this.frameDuration = const Duration(milliseconds: 250),
+    this.state = PetVisualState.normal,
   });
 
   @override
   State<PetSpriteWidget> createState() => _PetSpriteWidgetState();
 }
 
-class _PetSpriteWidgetState extends State<PetSpriteWidget> {
+class _PetSpriteWidgetState extends State<PetSpriteWidget>
+    with SingleTickerProviderStateMixin {
   late int _currentFrame;
   Timer? _timer;
+  late AnimationController _pulseCtrl;
+
+  Duration get _frameDuration {
+    switch (widget.state) {
+      case PetVisualState.happy:
+        return const Duration(milliseconds: 150);
+      case PetVisualState.sleeping:
+        return const Duration(milliseconds: 800);
+      case PetVisualState.sick:
+        return const Duration(milliseconds: 400);
+      case PetVisualState.fainted:
+        return const Duration(milliseconds: 9999); // effectively stopped
+      case PetVisualState.normal:
+        return const Duration(milliseconds: 250);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _currentFrame = 0;
-    if (widget.spriteAssets.length > 1) {
-      _timer = Timer.periodic(widget.frameDuration, (_) {
-        setState(() {
-          _currentFrame = (_currentFrame + 1) % widget.spriteAssets.length;
-        });
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    if (widget.spriteAssets.length > 1 && widget.state != PetVisualState.fainted) {
+      _timer = Timer.periodic(_frameDuration, (_) {
+        if (mounted) {
+          setState(() {
+            _currentFrame = (_currentFrame + 1) % widget.spriteAssets.length;
+          });
+        }
       });
     }
   }
@@ -38,23 +68,40 @@ class _PetSpriteWidgetState extends State<PetSpriteWidget> {
   @override
   void didUpdateWidget(covariant PetSpriteWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.spriteAssets.length != widget.spriteAssets.length) {
+    final needsRestart = oldWidget.spriteAssets.length != widget.spriteAssets.length ||
+        oldWidget.state != widget.state;
+    if (needsRestart) {
       _currentFrame = 0;
-      _timer?.cancel();
-      if (widget.spriteAssets.length > 1) {
-        _timer = Timer.periodic(widget.frameDuration, (_) {
-          setState(() {
-            _currentFrame = (_currentFrame + 1) % widget.spriteAssets.length;
-          });
-        });
-      }
+      _startTimer();
     }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _pulseCtrl.dispose();
     super.dispose();
+  }
+
+  ColorFilter? get _colorFilter {
+    switch (widget.state) {
+      case PetVisualState.fainted:
+        return const ColorFilter.matrix([
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0,      0,      0,      1, 0,
+        ]);
+      case PetVisualState.sick:
+        return const ColorFilter.matrix([
+          0.5, 0,    0,    0, 0,
+          0,   0.9,  0,    0, 15,
+          0,   0,    0.5,  0, 0,
+          0,   0,    0,    1, 0,
+        ]);
+      default:
+        return null;
+    }
   }
 
   @override
@@ -63,17 +110,74 @@ class _PetSpriteWidgetState extends State<PetSpriteWidget> {
         ? widget.spriteAssets[_currentFrame]
         : '';
 
-    return Image.asset(
+    final filter = _colorFilter;
+
+    Widget sprite = Image.asset(
       spriteAsset,
       width: widget.size,
       height: widget.size,
       fit: BoxFit.contain,
       errorBuilder: (context, error, stackTrace) {
-        return Text(
-          '🐕',
-          style: TextStyle(fontSize: widget.size * 0.8),
-        );
+        final fallbackEmoji = switch (widget.state) {
+          PetVisualState.fainted  => '😵',
+          PetVisualState.sick     => '🤒',
+          PetVisualState.sleeping => '😴',
+          PetVisualState.happy    => '😄',
+          PetVisualState.normal   => '🐶',
+        };
+        return Text(fallbackEmoji, style: TextStyle(fontSize: widget.size * 0.8));
       },
+    );
+
+    if (filter != null) {
+      sprite = ColorFiltered(colorFilter: filter, child: sprite);
+    }
+
+    // State overlays
+    Widget? badge;
+    switch (widget.state) {
+      case PetVisualState.sleeping:
+        badge = AnimatedBuilder(
+          animation: _pulseCtrl,
+          builder: (context, child) => Opacity(
+            opacity: 0.5 + _pulseCtrl.value * 0.5,
+            child: child,
+          ),
+          child: const Text('💤', style: TextStyle(fontSize: 20)),
+        );
+      case PetVisualState.sick:
+        badge = const Text('🤢', style: TextStyle(fontSize: 18));
+      case PetVisualState.happy:
+        badge = AnimatedBuilder(
+          animation: _pulseCtrl,
+          builder: (context, child) => Opacity(
+            opacity: _pulseCtrl.value,
+            child: child,
+          ),
+          child: const Text('✨', style: TextStyle(fontSize: 16)),
+        );
+      case PetVisualState.fainted:
+        badge = const Text('😵', style: TextStyle(fontSize: 20));
+      case PetVisualState.normal:
+        badge = null;
+    }
+
+    return SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          sprite,
+          if (badge != null)
+            Positioned(
+              top: -8,
+              right: -8,
+              child: badge,
+            ),
+        ],
+      ),
     );
   }
 }

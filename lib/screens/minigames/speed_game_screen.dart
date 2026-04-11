@@ -5,6 +5,7 @@ import 'dart:math';
 
 import '../../controllers/pet_controller.dart';
 import '../../models/minigame.dart';
+import '../../services/locale_controller.dart';
 
 class SpeedGameScreen extends StatefulWidget {
   final GameDifficulty difficulty;
@@ -100,13 +101,13 @@ class _SpeedGameScreenState extends State<SpeedGameScreen> {
 
     if (score > 0) {
       int baseReward = widget.difficulty == GameDifficulty.easy
-          ? 50
+          ? 10
           : widget.difficulty == GameDifficulty.medium
-              ? 100
-              : 200;
+              ? 18
+              : 32;
 
-      coinsReward = ((baseReward + score * 5) * controller.minigameRewardMultiplier).round();
-      xpReward = ((baseReward + score * 8) * controller.minigameRewardMultiplier).round();
+      coinsReward = ((baseReward + score) * controller.minigameRewardMultiplier).round();
+      xpReward = ((baseReward + score * 2) * controller.minigameRewardMultiplier).round();
     }
 
     final result = GameResult(
@@ -121,21 +122,22 @@ class _SpeedGameScreenState extends State<SpeedGameScreen> {
     );
 
     if (mounted) {
+      final s = context.read<LocaleController>().s;
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(
-          title: const Text('⏱️ Tempo Esgotado!'),
+          title: Text(s.mgTimeUp),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Cliques corretos: $score'),
-              Text('Nível alcançado: $level'),
+              Text('${s.mgCorrectClicks}: $score'),
+              Text('${s.mgLevelReached}: $level'),
               const SizedBox(height: 12),
-              Text('💰 Moedas: +${result.coinsReward}'),
+              Text('${s.mgCoinsLabel}: +${result.coinsReward}'),
               Text('⭐ XP: +${result.xpReward}'),
-              Text('😊 Felicidade: +${result.happinessReward}'),
+              Text('${s.mgHappinessLabel}: +${result.happinessReward}'),
             ],
           ),
           actions: [
@@ -168,7 +170,7 @@ class _SpeedGameScreenState extends State<SpeedGameScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Jogo de Velocidade'),
+        title: Text(context.watch<LocaleController>().s.mgSpeedTitle),
         centerTitle: true,
         actions: [
           Padding(

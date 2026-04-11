@@ -5,6 +5,7 @@ import 'dart:math';
 
 import '../../controllers/pet_controller.dart';
 import '../../models/minigame.dart';
+import '../../services/locale_controller.dart';
 
 class JumpGameScreen extends StatefulWidget {
   final GameDifficulty difficulty;
@@ -129,13 +130,13 @@ class _JumpGameScreenState extends State<JumpGameScreen> with SingleTickerProvid
 
     if (score > 0) {
       int baseReward = widget.difficulty == GameDifficulty.easy
-          ? 50
+          ? 10
           : widget.difficulty == GameDifficulty.medium
-              ? 100
-              : 200;
+              ? 18
+              : 32;
 
-      coinsReward = ((baseReward + score * 3) * controller.minigameRewardMultiplier).round();
-      xpReward = ((baseReward + score * 5) * controller.minigameRewardMultiplier).round();
+      coinsReward = ((baseReward + score) * controller.minigameRewardMultiplier).round();
+      xpReward = ((baseReward + score * 2) * controller.minigameRewardMultiplier).round();
     }
 
     final result = GameResult(
@@ -150,6 +151,7 @@ class _JumpGameScreenState extends State<JumpGameScreen> with SingleTickerProvid
     );
 
     if (mounted) {
+      final s = context.read<LocaleController>().s;
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -159,11 +161,11 @@ class _JumpGameScreenState extends State<JumpGameScreen> with SingleTickerProvid
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Plataformas puladas: $score'),
+              Text('${s.mgPlatformsJumped}: $score'),
               const SizedBox(height: 12),
-              Text('💰 Moedas: +${result.coinsReward}'),
+              Text('${s.mgCoinsLabel}: +${result.coinsReward}'),
               Text('⭐ XP: +${result.xpReward}'),
-              Text('😊 Felicidade: +${result.happinessReward}'),
+              Text('${s.mgHappinessLabel}: +${result.happinessReward}'),
             ],
           ),
           actions: [
@@ -204,14 +206,14 @@ class _JumpGameScreenState extends State<JumpGameScreen> with SingleTickerProvid
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Jogo de Salto'),
+        title: Text(context.watch<LocaleController>().s.mgJumpTitle),
         centerTitle: true,
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Center(
               child: Text(
-                'Vidas: $lives',
+                '${context.watch<LocaleController>().isPt ? 'Vidas' : 'Lives'}: $lives',
                 style: theme.textTheme.titleMedium,
               ),
             ),
