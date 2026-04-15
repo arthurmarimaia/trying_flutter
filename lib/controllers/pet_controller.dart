@@ -14,6 +14,7 @@ import '../models/pet_evolution.dart';
 import '../models/adventure.dart';
 import '../models/daily_quest.dart';
 import '../models/achievement.dart';
+import '../models/pet_dialogue.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/sound_service.dart';
@@ -136,12 +137,32 @@ class PetController extends ChangeNotifier {
               DateTime.now().add(const Duration(minutes: 10)),
             );
           }
+          // Saúde crítica
+          if (pet.health < 20 && pet.health > 0) {
+            await NotificationService.scheduleNotification(
+              4,
+              '🚨 $petName está em estado crítico!',
+              'A saúde está perigosamente baixa. Cuide de $petName agora!',
+              DateTime.now().add(const Duration(minutes: 5)),
+            );
+          }
+          // Fome crítica
+          if (pet.hunger >= 90) {
+            await NotificationService.scheduleNotification(
+              5,
+              '😩 $petName está passando mal de fome!',
+              'Alimente $petName urgentemente!',
+              DateTime.now().add(const Duration(minutes: 10)),
+            );
+          }
         }
 
         Future<void> cancelPetNotifications() async {
           await NotificationService.cancelNotification(1);
           await NotificationService.cancelNotification(2);
           await NotificationService.cancelNotification(3);
+          await NotificationService.cancelNotification(4);
+          await NotificationService.cancelNotification(5);
         }
   late Pet pet;
   List<DailyQuest> dailyQuests = [];
@@ -161,6 +182,23 @@ class PetController extends ChangeNotifier {
   bool loading = true;
   bool isFirstLaunch = false;
   bool isDarkMode = false;
+  // ── Accessibility ───────────────────────────────────────────────────────
+  bool _isHighContrast = false;
+  bool get isHighContrast => _isHighContrast;
+  double _fontScale = 1.0;
+  double get fontScale => _fontScale;
+
+  void setHighContrast(bool value) {
+    _isHighContrast = value;
+    saveState();
+    notifyListeners();
+  }
+
+  void setFontScale(double value) {
+    _fontScale = value.clamp(0.8, 2.0);
+    saveState();
+    notifyListeners();
+  }
   /// Set to the new level when a level-up occurs; cleared by UI after animating.
   int? _pendingLevelUp;
   int? get pendingLevelUp => _pendingLevelUp;
@@ -281,6 +319,24 @@ class PetController extends ChangeNotifier {
       isCosmetic: true,
       icon: '🦹',
     ),
+    StoreItem(
+      id: 'boost_xp',
+      name: 'Boost de XP',
+      description: 'Dobra o XP ganho por 30 minutos.',
+      price: 60,
+      isCosmetic: false,
+      icon: '⚡',
+      maxStack: 3,
+    ),
+    StoreItem(
+      id: 'cooldown_reset',
+      name: 'Reset de Cooldown',
+      description: 'Zera o tempo de espera de todas as ações imediatamente.',
+      price: 45,
+      isCosmetic: false,
+      icon: '⏩',
+      maxStack: 3,
+    ),
   ];
   Map<String, bool> ownedItems = {};
   /// Quantity of each consumable held. key = item id, value = count.
@@ -295,6 +351,12 @@ class PetController extends ChangeNotifier {
   late MiniGameStats miniGameStats;
   late Adventure? currentAdventure;
   late AdventureLog adventureLog;
+
+  // ── Boost system ─────────────────────────────────────────────────────────
+  DateTime? _xpBoostExpiry;
+  bool get xpBoostActive => _xpBoostExpiry != null && DateTime.now().isBefore(_xpBoostExpiry!);
+  /// Remaining boost seconds, 0 if inactive.
+  int get xpBoostSecondsLeft => xpBoostActive ? _xpBoostExpiry!.difference(DateTime.now()).inSeconds : 0;
 
   Future<void> init() async {
     await NotificationService.init();
@@ -406,6 +468,16 @@ class PetController extends ChangeNotifier {
     inventory = (jsonDecode(prefs2.getString(_k('inventory')) ?? '{}') as Map<String, dynamic>)
         .map((key, value) => MapEntry(key, value as int));
 
+    final boostExpiryStr = prefs2.getString(_k('xp_boost_expiry'));
+    if (boostExpiryStr != null) {
+      final expiry = DateTime.tryParse(boostExpiryStr);
+      if (expiry != null && DateTime.now().isBefore(expiry)) {
+        _xpBoostExpiry = expiry;
+      } else {
+        _xpBoostExpiry = null;
+      }
+    }
+
     final eventState = await StorageService.loadEventState();
     if (eventState.isNotEmpty) {
       final savedEvent = eventState['currentEvent'];
@@ -432,6 +504,8 @@ class PetController extends ChangeNotifier {
         : null;
 
     isFirstLaunch = prefs2.getBool(_k('onboarding_done')) != true;
+    _isHighContrast = prefs2.getBool(_k('high_contrast')) ?? false;
+    _fontScale = prefs2.getDouble(_k('font_scale')) ?? 1.0;
 
     _resetGoalsIfNeeded();
     _generateDailyEvent();
@@ -650,6 +724,31 @@ class PetController extends ChangeNotifier {
   bool get isExhausted => pet.energy <= 10;
   bool get isFainted => pet.health == 0;
 
+  // ── Pet type colour theme ────────────────────────────────────────────────
+
+  /// Returns [topColor, bottomColor] for the home background gradient.
+  List<int> get petThemeArgb {
+    switch (pet.petType) {
+      case PetType.canino:
+        return [0xFFD4A96A, 0xFFA0522D]; // warm amber/brown
+      case PetType.reptil:
+        return [0xFF7DBD87, 0xFF2E7D32]; // lush green
+      case PetType.slime:
+        return [0xFFA78BFA, 0xFF4C1D95]; // violet/purple
+    }
+  }
+
+  List<int> get petThemeArgbDark {
+    switch (pet.petType) {
+      case PetType.canino:
+        return [0xFF3E2723, 0xFF1A0A00];
+      case PetType.reptil:
+        return [0xFF1B5E20, 0xFF0A1F0A];
+      case PetType.slime:
+        return [0xFF1A0533, 0xFF0D001A];
+    }
+  }
+
   // ── Bond passive effects ────────────────────────────────────────────────
 
   /// Extra XP earned per action based on bond level.
@@ -680,6 +779,28 @@ class PetController extends ChangeNotifier {
 
   void _increaseBond(int amount) {
     pet.bond = (pet.bond + amount).clamp(0, 100);
+  }
+
+  // ── Dialogue system ─────────────────────────────────────────────────────
+  DateTime _lastDialogueTime = DateTime.fromMillisecondsSinceEpoch(0);
+  static const int _dialogueCooldownSeconds = 30;
+
+  bool get canTalkToPet {
+    return DateTime.now().difference(_lastDialogueTime).inSeconds >= _dialogueCooldownSeconds;
+  }
+
+  int get dialogueCooldownSecondsLeft {
+    final elapsed = DateTime.now().difference(_lastDialogueTime).inSeconds;
+    return (_dialogueCooldownSeconds - elapsed).clamp(0, _dialogueCooldownSeconds);
+  }
+
+  Future<void> applyDialogueReward(DialogueChoice choice) async {
+    pet.happiness = (pet.happiness + choice.happinessDelta).clamp(0, 100);
+    _lastDialogueTime = DateTime.now();
+    SoundService.play(SoundEffect.action);
+    HapticFeedback.lightImpact();
+    await saveState();
+    notifyListeners();
   }
 
   // ── Daily Bonus ─────────────────────────────────────────────────────────
@@ -734,13 +855,30 @@ class PetController extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool canFeed() => pet.hunger > 20 && !isSick;
-  bool canSleep() => pet.energy < 80 && !isExhausted;
-  bool canPlay() => pet.energy > 20 && !isSick && !isExhausted;
-  bool canClean() => pet.health < 90;
-  bool canHeal() => pet.health < 50 && pet.coins >= 5;
-  bool canTrain() => pet.energy > 30 && pet.health > 40 && !isSick;
-  bool canCuddle() => true; // Sempre disponível
+  // ── Cooldown helpers ─────────────────────────────────────────────────────
+  static const int _cooldownMinutes = 5;
+
+  bool isOnCooldown(String action) {
+    final last = lastActionTime[action];
+    if (last == null) return false;
+    return DateTime.now().difference(last).inMinutes < _cooldownMinutes;
+  }
+
+  int cooldownSecondsLeft(String action) {
+    final last = lastActionTime[action];
+    if (last == null) return 0;
+    final elapsed = DateTime.now().difference(last).inSeconds;
+    final total = _cooldownMinutes * 60;
+    return (total - elapsed).clamp(0, total);
+  }
+
+  bool canFeed() => pet.hunger > 20 && !isSick && !isOnCooldown('feed');
+  bool canSleep() => pet.energy < 80 && !isOnCooldown('sleep');
+  bool canPlay() => pet.energy > 20 && !isSick && !isExhausted && !isOnCooldown('play');
+  bool canClean() => pet.health < 90 && !isOnCooldown('clean');
+  bool canHeal() => pet.health < 50 && pet.coins >= 5 && !isOnCooldown('heal');
+  bool canTrain() => pet.energy > 30 && pet.health > 40 && !isSick && !isOnCooldown('train');
+  bool canCuddle() => !isOnCooldown('cuddle');
 
   String? getActionRestriction(String action) {
     final now = DateTime.now();
@@ -762,7 +900,6 @@ class PetController extends ChangeNotifier {
         break;
       case 'sleep':
         if (dailyCount >= 5) return 'Limite diário de sono atingido (5x).';
-        if (isExhausted) return 'Pet está exausto, descanse mais tarde.';
         if (pet.energy >= 80) return 'Pet não está cansado.';
         break;
       case 'play':
@@ -799,6 +936,7 @@ class PetController extends ChangeNotifier {
     update();
     // Bond passive: extra XP per action
     pet.experience += bondXpBonus;
+    if (xpBoostActive) pet.experience += 5; // flat bonus while boost active
     pet.message = message;
     pet.lastUpdate = DateTime.now();
     if (actionId != null) {
@@ -998,6 +1136,14 @@ class PetController extends ChangeNotifier {
       case 'spray_saude':
         pet.health = (pet.health + 25).clamp(0, 100);
         pet.message = 'Spray de saúde aplicado! 🩺';
+        break;
+      case 'boost_xp':
+        _xpBoostExpiry = DateTime.now().add(const Duration(minutes: 30));
+        pet.message = '⚡ Boost de XP ativo por 30 minutos!';
+        break;
+      case 'cooldown_reset':
+        lastActionTime.clear();
+        pet.message = '⏩ Cooldowns zerados! Todas as ações disponíveis.';
         break;
       default:
         pet.message = 'Compra realizada com sucesso!';
@@ -1325,6 +1471,11 @@ class PetController extends ChangeNotifier {
     prefs.setString(_k('last_login_date'), _lastLoginDate.toIso8601String());
     prefs.setBool(_k('daily_bonus_pending'), _dailyBonusPending);
     prefs.setString(_k('inventory'), jsonEncode(inventory));
+    if (_xpBoostExpiry != null) {
+      prefs.setString(_k('xp_boost_expiry'), _xpBoostExpiry!.toIso8601String());
+    } else {
+      prefs.remove(_k('xp_boost_expiry'));
+    }
     prefs.setString(_k('unlocked_titles'), jsonEncode(unlockedTitles.toList()));
     prefs.setString(_k('active_title'), activeTitle);
     prefs.setString(_k('daily_shop'), jsonEncode(dailyShopItemIds));
@@ -1333,6 +1484,8 @@ class PetController extends ChangeNotifier {
     prefs.setString(_k('adventure_log'), jsonEncode(adventureLog.toMap()));
     prefs.setString(_k('current_adventure'),
         currentAdventure != null ? jsonEncode(currentAdventure!.toMap()) : '');
+    prefs.setBool(_k('high_contrast'), _isHighContrast);
+    prefs.setDouble(_k('font_scale'), _fontScale);
 
     await StorageService.savePet(pet);
     await StorageService.saveDailyGoals(

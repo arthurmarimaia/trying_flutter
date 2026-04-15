@@ -117,6 +117,11 @@ class AppStrings {
   String get actionHeal    => _en ? 'Medicate': 'Medicar';
   String get actionTrain   => _en ? 'Train'   : 'Treinar';
   String get actionCuddle  => _en ? 'Cuddle'  : 'Carinho';
+  String get actionTalk    => _en ? 'Talk'    : 'Conversar';
+
+  // ── Dialogue screen ──────────────────────────────────────────────────────────
+  String get dialogueTitle => _en ? 'Chat with your pet' : 'Conversar com o pet';
+  String get dialogueBack  => _en ? 'Go back' : 'Voltar';
 
   // ── Home screen — status bars ────────────────────────────────────────────────
   String get statHealth    => _en ? 'Health'   : 'Saúde';
@@ -523,6 +528,8 @@ class AppStrings {
     'katana'        => _en ? 'Samurai Katana'    : 'Katana de Samurai',
     'space_suit'    => _en ? 'Astronaut Suit'    : 'Traje Astronauta',
     'cape'          => _en ? 'Vampire Cape'      : 'Capa Vampiro',
+    'boost_xp'      => _en ? 'XP Boost'          : 'Boost de XP',
+    'cooldown_reset'=> _en ? 'Cooldown Reset'    : 'Reset de Cooldown',
     _               => id,
   };
 
@@ -540,6 +547,8 @@ class AppStrings {
     'katana'        => _en ? 'A legendary blade. Unlocks the Samurai Form at level 7.'                   : 'Uma lâmina lendária. Desbloqueia a Forma Samurai ao atingir nível 7.',
     'space_suit'    => _en ? 'Out of this world! Unlocks the Astronaut Form at level 6.'                 : 'É de outro mundo! Desbloqueia a Forma Astronauta ao atingir nível 6.',
     'cape'          => _en ? 'Mysterious and dark. Unlocks the Vampire Form at level 6.'                 : 'Misteriosa e sombria. Desbloqueia a Forma Vampiro ao atingir nível 6.',
+    'boost_xp'      => _en ? 'Doubles XP gained for 30 minutes.'                                       : 'Dobra o XP ganho por 30 minutos.',
+    'cooldown_reset'=> _en ? 'Instantly resets all action cooldowns.'                                  : 'Zera o tempo de espera de todas as ações imediatamente.',
     _               => id,
   };
 
@@ -580,6 +589,8 @@ class AppStrings {
 
   /// 'done' / 'concluído' label used in goal progress.
   String get goalDone => _en ? 'done' : 'concluído';
+
+  String get boostXpActive => _en ? 'XP Boost active' : 'Boost de XP ativo';
 
   // ── Pet message (best status) ─────────────────────────────────────────────
 

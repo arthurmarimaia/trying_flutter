@@ -64,23 +64,43 @@ class MyApp extends StatelessWidget {
       key: ValueKey(auth.activeUsername),
       create: (_) => PetController(prefix: auth.storagePrefix)..init(),
       child: Consumer<PetController>(
-        builder: (context, controller, _) => MaterialApp(
-          title: 'Tamagotchi',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData.from(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-            useMaterial3: true,
-          ),
-          darkTheme: ThemeData.from(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.deepPurple,
-              brightness: Brightness.dark,
+        builder: (context, controller, _) {
+          // ── Accessibility: high contrast theme ──────────────────────────
+          final seedColor = controller.isHighContrast
+              ? Colors.yellow
+              : Colors.deepPurple;
+          final lightScheme = controller.isHighContrast
+              ? const ColorScheme.highContrastLight()
+              : ColorScheme.fromSeed(seedColor: seedColor);
+          final darkScheme = controller.isHighContrast
+              ? const ColorScheme.highContrastDark()
+              : ColorScheme.fromSeed(
+                  seedColor: seedColor, brightness: Brightness.dark);
+
+          return MaterialApp(
+            title: 'Tamagotchi',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData.from(
+              colorScheme: lightScheme,
+              useMaterial3: true,
             ),
-            useMaterial3: true,
-          ),
-          themeMode: controller.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-          home: const HomeScreen(),
-        ),
+            darkTheme: ThemeData.from(
+              colorScheme: darkScheme,
+              useMaterial3: true,
+            ),
+            themeMode: controller.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            // ── Accessibility: font scale ──────────────────────────────────
+            builder: (context, child) {
+              return MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  textScaler: TextScaler.linear(controller.fontScale),
+                ),
+                child: child!,
+              );
+            },
+            home: const HomeScreen(),
+          );
+        },
       ),
     );
   }

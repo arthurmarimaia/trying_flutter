@@ -86,6 +86,17 @@ class _AdventureScreenState extends State<AdventureScreen> {
       appBar: AppBar(
         title: Text('${s.adventureTitle} 🌍'),
         centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Chip(
+              avatar: const Text('💰', style: TextStyle(fontSize: 14)),
+              label: Text('${controller.pet.coins}',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ],
       ),
       body: Container(
         decoration: BoxDecoration(

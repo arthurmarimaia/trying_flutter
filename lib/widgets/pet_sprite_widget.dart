@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../models/pet.dart';
 
 enum PetVisualState { normal, happy, sick, sleeping, fainted }
 
@@ -8,12 +9,14 @@ class PetSpriteWidget extends StatefulWidget {
   final List<String> spriteAssets;
   final double size;
   final PetVisualState state;
+  final PetType? petType;
 
   const PetSpriteWidget({
     super.key,
     required this.spriteAssets,
     this.size = 96,
     this.state = PetVisualState.normal,
+    this.petType,
   });
 
   @override
@@ -25,6 +28,7 @@ class _PetSpriteWidgetState extends State<PetSpriteWidget>
   late int _currentFrame;
   Timer? _timer;
   late AnimationController _pulseCtrl;
+  bool _assetFailed = false;
 
   Duration get _frameDuration {
     switch (widget.state) {
@@ -54,7 +58,9 @@ class _PetSpriteWidgetState extends State<PetSpriteWidget>
 
   void _startTimer() {
     _timer?.cancel();
-    if (widget.spriteAssets.length > 1 && widget.state != PetVisualState.fainted) {
+    if (!_assetFailed &&
+        widget.spriteAssets.length > 1 &&
+        widget.state != PetVisualState.fainted) {
       _timer = Timer.periodic(_frameDuration, (_) {
         if (mounted) {
           setState(() {
@@ -72,6 +78,7 @@ class _PetSpriteWidgetState extends State<PetSpriteWidget>
         oldWidget.state != widget.state;
     if (needsRestart) {
       _currentFrame = 0;
+      _assetFailed = false;
       _startTimer();
     }
   }
@@ -81,6 +88,22 @@ class _PetSpriteWidgetState extends State<PetSpriteWidget>
     _timer?.cancel();
     _pulseCtrl.dispose();
     super.dispose();
+  }
+
+  Widget _buildFallback() {
+    final emoji = switch (widget.state) {
+      PetVisualState.fainted  => '😵',
+      PetVisualState.sick     => '🤒',
+      PetVisualState.sleeping => '😴',
+      // For normal/happy, prefer a type-specific emoji
+      _ => switch (widget.petType) {
+        PetType.canino => '🐶',
+        PetType.reptil => '🦎',
+        PetType.slime  => '🟢',
+        null           => '🐾',
+      },
+    };
+    return Text(emoji, style: TextStyle(fontSize: widget.size * 0.8));
   }
 
   ColorFilter? get _colorFilter {
@@ -112,22 +135,29 @@ class _PetSpriteWidgetState extends State<PetSpriteWidget>
 
     final filter = _colorFilter;
 
-    Widget sprite = Image.asset(
-      spriteAsset,
-      width: widget.size,
-      height: widget.size,
-      fit: BoxFit.contain,
-      errorBuilder: (context, error, stackTrace) {
-        final fallbackEmoji = switch (widget.state) {
-          PetVisualState.fainted  => '😵',
-          PetVisualState.sick     => '🤒',
-          PetVisualState.sleeping => '😴',
-          PetVisualState.happy    => '😄',
-          PetVisualState.normal   => '🐶',
-        };
-        return Text(fallbackEmoji, style: TextStyle(fontSize: widget.size * 0.8));
-      },
-    );
+    Widget sprite;
+    if (spriteAsset.isEmpty || _assetFailed) {
+      sprite = _buildFallback();
+    } else {
+      sprite = Image.asset(
+        spriteAsset,
+        width: widget.size,
+        height: widget.size,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          // Cache the failure so we stop retrying on every frame tick
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && !_assetFailed) {
+              setState(() {
+                _assetFailed = true;
+                _timer?.cancel();
+              });
+            }
+          });
+          return _buildFallback();
+        },
+      );
+    }
 
     if (filter != null) {
       sprite = ColorFiltered(colorFilter: filter, child: sprite);

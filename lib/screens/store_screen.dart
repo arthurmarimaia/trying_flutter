@@ -21,6 +21,17 @@ class StoreScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(s.storeTitle),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Chip(
+              avatar: const Text('💰', style: TextStyle(fontSize: 14)),
+              label: Text('${controller.pet.coins}',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(18),

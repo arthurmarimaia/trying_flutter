@@ -20,6 +20,43 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
+          // ── Acessibilidade ──────────────────────────────────────────────
+          _SectionHeader(label: 'Acessibilidade'),
+          const SizedBox(height: 8),
+          SwitchListTile.adaptive(
+            value: controller.isHighContrast,
+            onChanged: (value) {
+              controller.setHighContrast(value);
+            },
+            title: const Text('Modo alto contraste'),
+            subtitle: const Text(
+                'Melhora a visibilidade das cores e contraste.'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.format_size),
+            title: const Text('Tamanho da fonte'),
+            subtitle: Text(
+              controller.fontScale <= 1.0
+                  ? 'Normal'
+                  : controller.fontScale <= 1.3
+                      ? 'Grande'
+                      : 'Muito grande',
+            ),
+            trailing: DropdownButton<double>(
+              value: controller.fontScale,
+              underline: const SizedBox.shrink(),
+              items: const [
+                DropdownMenuItem(value: 1.0, child: Text('Normal')),
+                DropdownMenuItem(value: 1.3, child: Text('Grande')),
+                DropdownMenuItem(value: 1.5, child: Text('Muito grande')),
+              ],
+              onChanged: (value) {
+                if (value != null) controller.setFontScale(value);
+              },
+            ),
+          ),
+          const Divider(height: 32),
+          // ── Notificações ────────────────────────────────────────────────
           SwitchListTile.adaptive(
             value: controller.notificationsEnabled,
             onChanged: (value) async {

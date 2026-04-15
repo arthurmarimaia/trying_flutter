@@ -19,6 +19,7 @@ import '../screens/onboarding_screen.dart';
 import '../screens/daily_bonus_screen.dart';
 import '../screens/history_screen.dart';
 import '../screens/pet_profile_screen.dart';
+import '../screens/pet_dialogue_screen.dart';
 import '../services/auth_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -88,19 +89,21 @@ class _StatusBarItem extends StatelessWidget {
   final Color baseColor;
   final Color labelColor;
 
-  Color get _barColor {
-    if (value <= 20) return const Color(0xFFD32F2F);
-    if (value <= 40) return const Color(0xFFF57C00);
+  Color _barColor(int v) {
+    if (v <= 20) return const Color(0xFFD32F2F);
+    if (v <= 40) return const Color(0xFFF57C00);
     return baseColor;
   }
 
   @override
   Widget build(BuildContext context) {
-    final frac = (value / 100.0).clamp(0.0, 1.0);
-    final valColor = _barColor;
+    final targetFrac = (value / 100.0).clamp(0.0, 1.0);
 
     return Expanded(
-      child: Tooltip(
+      child: Semantics(
+        label: '$label: $value%',
+        value: '$value%',
+        child: Tooltip(
         message: '$label: $value%',
         preferBelow: true,
         triggerMode: TooltipTriggerMode.tap,
@@ -112,32 +115,51 @@ class _StatusBarItem extends StatelessWidget {
               Text(icon, style: const TextStyle(fontSize: 14)),
               const SizedBox(width: 5),
               Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(
-                    value: frac,
-                    minHeight: 11,
-                    backgroundColor: baseColor.withValues(alpha: 0.18),
-                    valueColor: AlwaysStoppedAnimation<Color>(valColor),
-                  ),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(end: targetFrac),
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.easeInOut,
+                  builder: (context, animFrac, _) {
+                    final displayVal = (animFrac * 100).round();
+                    final valColor = _barColor(displayVal);
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: animFrac,
+                        minHeight: 11,
+                        backgroundColor: baseColor.withValues(alpha: 0.18),
+                        valueColor: AlwaysStoppedAnimation<Color>(valColor),
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 5),
               SizedBox(
                 width: 24,
-                child: Text(
-                  '$value',
-                  textAlign: TextAlign.end,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: valColor,
-                  ),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(end: value.toDouble()),
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.easeInOut,
+                  builder: (context, animVal, _) {
+                    final displayVal = animVal.round();
+                    final valColor = _barColor(displayVal);
+                    return Text(
+                      '$displayVal',
+                      textAlign: TextAlign.end,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: valColor,
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -175,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
             SafeArea(
               bottom: false,
               child: Material(
-                color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                color: Color(controller.petThemeArgb[0]).withAlpha(200),
                 child: _PetStatusBar(controller: controller),
               ),
             ),
@@ -479,12 +501,15 @@ class _HomeTabState extends State<_HomeTab> with TickerProviderStateMixin {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: controller.isDarkMode
-                ? [Colors.black87, Colors.deepPurple.shade900]
-                : [Colors.purple.shade100, Colors.blue.shade200],
+                ? controller.petThemeArgbDark.map((c) => Color(c)).toList()
+                : controller.petThemeArgb.map((c) => Color(c)).toList(),
           ),
         ),
         child: Stack(
           children: [
+            // Seasonal event ambient overlay
+            if (controller.currentEvent != null)
+              _SeasonalOverlay(eventId: controller.currentEvent!.id),
             Positioned(
               top: 40,
               left: 10,
@@ -530,6 +555,33 @@ class _HomeTabState extends State<_HomeTab> with TickerProviderStateMixin {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _ToyConsole(controller: controller, onAction: _performAction),
+                if (controller.xpBoostActive)
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFFD700), Color(0xFFFF8C00)],
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('⚡', style: TextStyle(fontSize: 16)),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${s.boostXpActive} — ${controller.xpBoostSecondsLeft ~/ 60}m ${controller.xpBoostSecondsLeft % 60}s',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 if (controller.currentAdventure != null && controller.currentAdventure!.isActive)
                   _AdventureIndicator(adventure: controller.currentAdventure!),
                 const SizedBox(height: 18),
@@ -1011,13 +1063,22 @@ class _ToyConsole extends StatelessWidget {
               runSpacing: 10,
               alignment: WrapAlignment.center,
               children: [
-                _ToyActionButton(label: s.actionFeed,   icon: Icons.restaurant,        onTap: () => onAction(controller.feed),   enabled: controller.canFeed()),
-                _ToyActionButton(label: s.actionSleep,  icon: Icons.bedtime,           onTap: () => onAction(controller.sleep),  enabled: controller.canSleep()),
-                _ToyActionButton(label: s.actionPlay,   icon: Icons.sports_basketball, onTap: () => onAction(controller.play),   enabled: controller.canPlay()),
-                _ToyActionButton(label: s.actionClean,  icon: Icons.bathtub,           onTap: () => onAction(controller.clean),  enabled: controller.canClean()),
-                _ToyActionButton(label: s.actionHeal,   icon: Icons.medical_services,  onTap: () => onAction(controller.heal),   enabled: controller.canHeal()),
-                _ToyActionButton(label: s.actionTrain,  icon: Icons.fitness_center,    onTap: () => onAction(controller.train),  enabled: controller.canTrain()),
-                _ToyActionButton(label: s.actionCuddle, icon: Icons.favorite,          onTap: () => onAction(controller.cuddle), enabled: controller.canCuddle()),
+                _ToyActionButton(label: s.actionFeed,   icon: Icons.restaurant,        onTap: () => onAction(controller.feed),   enabled: controller.canFeed(),   cooldownSeconds: controller.cooldownSecondsLeft('feed')),
+                _ToyActionButton(label: s.actionSleep,  icon: Icons.bedtime,           onTap: () => onAction(controller.sleep),  enabled: controller.canSleep(),  cooldownSeconds: controller.cooldownSecondsLeft('sleep')),
+                _ToyActionButton(label: s.actionPlay,   icon: Icons.sports_basketball, onTap: () => onAction(controller.play),   enabled: controller.canPlay(),   cooldownSeconds: controller.cooldownSecondsLeft('play')),
+                _ToyActionButton(label: s.actionClean,  icon: Icons.bathtub,           onTap: () => onAction(controller.clean),  enabled: controller.canClean(),  cooldownSeconds: controller.cooldownSecondsLeft('clean')),
+                _ToyActionButton(label: s.actionHeal,   icon: Icons.medical_services,  onTap: () => onAction(controller.heal),   enabled: controller.canHeal(),   cooldownSeconds: controller.cooldownSecondsLeft('heal')),
+                _ToyActionButton(label: s.actionTrain,  icon: Icons.fitness_center,    onTap: () => onAction(controller.train),  enabled: controller.canTrain(),  cooldownSeconds: controller.cooldownSecondsLeft('train')),
+                _ToyActionButton(label: s.actionCuddle, icon: Icons.favorite,          onTap: () => onAction(controller.cuddle), enabled: controller.canCuddle(), cooldownSeconds: controller.cooldownSecondsLeft('cuddle')),
+                _ToyActionButton(
+                  label: s.actionTalk,
+                  icon: Icons.chat_bubble_outline,
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const PetDialogueScreen()));
+                  },
+                  enabled: controller.canTalkToPet,
+                  cooldownSeconds: controller.dialogueCooldownSecondsLeft,
+                ),
               ],
             ),
           ],
@@ -1330,6 +1391,80 @@ class _PetStatusOverlayState extends State<_PetStatusOverlay>
   }
 }
 
+// ── Seasonal Event Overlay ───────────────────────────────────────────────────
+
+class _SeasonalOverlay extends StatefulWidget {
+  final String eventId;
+  const _SeasonalOverlay({required this.eventId});
+
+  @override
+  State<_SeasonalOverlay> createState() => _SeasonalOverlayState();
+}
+
+class _SeasonalOverlayState extends State<_SeasonalOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _float;
+
+  static const _particles = {
+    'pascoa':       ['🐣', '🌸', '🥚', '🐰'],
+    'festa_junina': ['🎆', '🌟', '🎉', '🎊'],
+    'halloween':    ['🎃', '👻', '🕸️', '🦇'],
+    'natal':        ['❄️', '🎅', '🎄', '⭐'],
+    'ano_novo':     ['🎉', '🥳', '✨', '🎊'],
+  };
+
+  List<String> get _emojis =>
+      _particles[widget.eventId] ?? [];
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: true);
+    _float = Tween<double>(begin: 0, end: 14)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_emojis.isEmpty) return const SizedBox.shrink();
+    final size = MediaQuery.of(context).size;
+    final positions = [
+      Offset(size.width * 0.05, size.height * 0.08),
+      Offset(size.width * 0.80, size.height * 0.12),
+      Offset(size.width * 0.15, size.height * 0.55),
+      Offset(size.width * 0.72, size.height * 0.48),
+    ];
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: _float,
+        builder: (ctx, _) => Stack(
+          children: [
+            for (int i = 0; i < _emojis.length; i++)
+              Positioned(
+                left: positions[i].dx,
+                top: positions[i].dy + (i.isEven ? _float.value : -_float.value),
+                child: Opacity(
+                  opacity: 0.55,
+                  child: Text(_emojis[i], style: const TextStyle(fontSize: 28)),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ToyLED extends StatelessWidget {
   final Color color;
 
@@ -1356,12 +1491,14 @@ class _ToyActionButton extends StatefulWidget {
   final IconData icon;
   final VoidCallback? onTap;
   final bool enabled;
+  final int cooldownSeconds;
 
   const _ToyActionButton({
     required this.label,
     required this.icon,
     required this.onTap,
     this.enabled = true,
+    this.cooldownSeconds = 0,
   });
 
   @override
@@ -1372,6 +1509,8 @@ class _ToyActionButtonState extends State<_ToyActionButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _pressCtrl;
   late Animation<double> _scale;
+  Timer? _cooldownTimer;
+  int _liveCooldown = 0;
 
   @override
   void initState() {
@@ -1380,10 +1519,37 @@ class _ToyActionButtonState extends State<_ToyActionButton>
         vsync: this, duration: const Duration(milliseconds: 80));
     _scale = Tween<double>(begin: 1.0, end: 0.88)
         .animate(CurvedAnimation(parent: _pressCtrl, curve: Curves.easeIn));
+    _syncCooldown();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ToyActionButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.cooldownSeconds != oldWidget.cooldownSeconds) {
+      _syncCooldown();
+    }
+  }
+
+  void _syncCooldown() {
+    _liveCooldown = widget.cooldownSeconds;
+    _cooldownTimer?.cancel();
+    if (_liveCooldown > 0) {
+      _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (_liveCooldown <= 1) {
+          _cooldownTimer?.cancel();
+          _cooldownTimer = null;
+          _liveCooldown = 0;
+        } else {
+          _liveCooldown--;
+        }
+        if (mounted) setState(() {});
+      });
+    }
   }
 
   @override
   void dispose() {
+    _cooldownTimer?.cancel();
     _pressCtrl.dispose();
     super.dispose();
   }
@@ -1395,8 +1561,12 @@ class _ToyActionButtonState extends State<_ToyActionButton>
     const btnTop     = Color(0xFF8B5CF6);
     const btnDisable = Color(0xFF4B5563);
 
+    final bool onCooldown = _liveCooldown > 0;
+    final String cooldownLabel = onCooldown
+        ? '${_liveCooldown ~/ 60}:${(_liveCooldown % 60).toString().padLeft(2, '0')}'
+        : '';
+
     return GestureDetector(
-      onTapDown: active ? (_) => _pressCtrl.forward() : null,
       onTapUp: active
           ? (_) {
               _pressCtrl.reverse();
@@ -1404,7 +1574,11 @@ class _ToyActionButtonState extends State<_ToyActionButton>
             }
           : null,
       onTapCancel: () => _pressCtrl.reverse(),
-      child: ScaleTransition(
+      child: Semantics(
+        label: widget.label,
+        button: true,
+        enabled: active,
+        child: ScaleTransition(
         scale: _scale,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1438,7 +1612,30 @@ class _ToyActionButtonState extends State<_ToyActionButton>
                             offset: Offset(1, 3)),
                       ],
               ),
-              child: Icon(widget.icon, color: Colors.white, size: 24),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Icon(widget.icon, color: Colors.white, size: 24),
+                  if (onCooldown)
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black.withAlpha(150),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        cooldownLabel,
+                        style: GoogleFonts.vt323(
+                          fontSize: 13,
+                          color: Colors.white70,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
             const SizedBox(height: 5),
             SizedBox(
@@ -1455,6 +1652,7 @@ class _ToyActionButtonState extends State<_ToyActionButton>
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -1830,6 +2028,7 @@ class _ShakingPetViewState extends State<_ShakingPetView>
           PetSpriteWidget(
             spriteAssets: c.pet.spriteAssets,
             size: 96,
+            petType: c.pet.petType,
             state: c.isFainted
                 ? PetVisualState.fainted
                 : c.isSick
@@ -1973,6 +2172,7 @@ class _PetFaintedScreen extends StatelessWidget {
                   child: PetSpriteWidget(
                     spriteAssets: controller.pet.spriteAssets,
                     size: 120,
+                    petType: controller.pet.petType,
                     state: PetVisualState.fainted,
                   ),
                 ),
