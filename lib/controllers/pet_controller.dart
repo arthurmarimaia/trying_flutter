@@ -416,10 +416,12 @@ class PetController extends ChangeNotifier {
       _loginStreak++;
       _lastLoginDate = today;
       _dailyBonusPending = true;
+      await _saveStreakState(prefs);
     } else {
       _loginStreak = 1;
       _lastLoginDate = today;
       _dailyBonusPending = true;
+      await _saveStreakState(prefs);
     }
 
     final questsJson = prefs.getString(_k('daily_quests'));
@@ -434,6 +436,12 @@ class PetController extends ChangeNotifier {
       _generateDailyQuests();
       await saveState(notify: false);
     }
+  }
+
+  Future<void> _saveStreakState(SharedPreferences prefs) async {
+    await prefs.setString(_k('last_login_date'), _lastLoginDate.toIso8601String());
+    await prefs.setInt(_k('login_streak'), _loginStreak);
+    await prefs.setBool(_k('daily_bonus_pending'), _dailyBonusPending);
   }
 
   Future<void> _loadState() async {
@@ -857,18 +865,20 @@ class PetController extends ChangeNotifier {
 
   // ── Cooldown helpers ─────────────────────────────────────────────────────
   static const int _cooldownMinutes = 5;
+  static const int _sleepCooldownMinutes = 180; // 3 hours
 
   bool isOnCooldown(String action) {
     final last = lastActionTime[action];
     if (last == null) return false;
-    return DateTime.now().difference(last).inMinutes < _cooldownMinutes;
+    final limit = action == 'sleep' ? _sleepCooldownMinutes : _cooldownMinutes;
+    return DateTime.now().difference(last).inMinutes < limit;
   }
 
   int cooldownSecondsLeft(String action) {
     final last = lastActionTime[action];
     if (last == null) return 0;
     final elapsed = DateTime.now().difference(last).inSeconds;
-    final total = _cooldownMinutes * 60;
+    final total = (action == 'sleep' ? _sleepCooldownMinutes : _cooldownMinutes) * 60;
     return (total - elapsed).clamp(0, total);
   }
 
@@ -901,6 +911,10 @@ class PetController extends ChangeNotifier {
       case 'sleep':
         if (dailyCount >= 5) return 'Limite diário de sono atingido (5x).';
         if (pet.energy >= 80) return 'Pet não está cansado.';
+        if (isOnCooldown('sleep')) {
+          final hoursLeft = (cooldownSecondsLeft('sleep') / 3600).ceil();
+          return 'O pet acabou de dormir. Aguarde ~$hoursLeft hora(s).';
+        }
         break;
       case 'play':
         if (dailyCount >= 8) return 'Limite diário de brincadeiras atingido (8x).';
@@ -1314,7 +1328,7 @@ class PetController extends ChangeNotifier {
       sleepMsg,
       () {
         _triggerReaction('sleep');
-        pet.energy = (pet.energy + 25).clamp(0, 100);
+        pet.energy = 100;
         pet.health = (pet.health + 10).clamp(0, 100);
         pet.hunger = (pet.hunger + 5).clamp(0, 100);
         pet.experience += 5;

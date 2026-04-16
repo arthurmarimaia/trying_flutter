@@ -1818,7 +1818,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const Divider(height: 40),
           ListTile(
-            leading: const Icon(Icons.logout, color: Colors.orange),
+            leading: const Icon(Icons.swap_horiz, color: Colors.orange),
             title: Text(
               s.settingsLogoutTitle,
               style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),

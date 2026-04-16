@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'controllers/pet_controller.dart';
 import 'screens/home_screen.dart';
 import 'screens/profile_login_screen.dart';
+import 'screens/splash_screen.dart';
 import 'services/auth_service.dart';
 import 'services/locale_controller.dart';
 import 'services/sound_service.dart';
@@ -23,19 +24,32 @@ void main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  // Guarantee the splash is visible for at least 2.5 s so animations play.
+  bool _splashDone = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 2500), () {
+      if (mounted) setState(() => _splashDone = true);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
 
-    // Wait for AuthService to read SharedPreferences
-    if (!auth.initialized) {
-      return const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(body: Center(child: CircularProgressIndicator())),
-      );
+    // Always show splash for the minimum duration.
+    if (!_splashDone || !auth.initialized) {
+      return const SplashScreen();
     }
 
     // Not logged in — show login/register screen

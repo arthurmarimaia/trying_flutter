@@ -62,22 +62,20 @@ class AppStrings {
   String get languageEn      => 'English';
   String get languageCurrent => _en ? languageEn : languagePt;
 
-  // ── Login / Register screen ──────────────────────────────────────────────────
-  String get loginSubtitle    => _en ? 'Sign in to continue with your pet'  : 'Entre para continuar com seu pet';
-  String get tabLogin         => _en ? 'Sign in'     : 'Entrar';
-  String get tabRegister      => _en ? 'Create account' : 'Criar conta';
-  String get btnLogin         => _en ? 'Sign in'     : 'Entrar';
-  String get btnRegister      => _en ? 'Create account' : 'Criar conta';
+  // ── Profile selection screen ───────────────────────────────────────────────
+  String get profileSelectSubtitle => _en ? 'Choose a profile to play'        : 'Escolha um perfil para jogar';
+  String get profileCreateBtn     => _en ? 'New profile'                      : 'Novo perfil';
+  String get profileCreateTitle   => _en ? 'Create profile'                   : 'Criar perfil';
+  String get profileChooseAvatar  => _en ? 'Choose an avatar'                 : 'Escolha um avatar';
+  String get profileNameLabel     => _en ? 'Profile name'                     : 'Nome do perfil';
+  String get profilePlayerNameHint => _en ? 'e.g. john'                        : 'ex: joao';
+  String get profileDeleteTitle   => _en ? 'Delete profile?'                  : 'Excluir perfil?';
+  String get profileDeleteContent => _en ? 'All progress for this profile will be permanently deleted.' : 'Todo o progresso deste perfil será excluído permanentemente.';
+  String get profileDeleteBtn     => _en ? 'Delete'                           : 'Excluir';
   String get fieldUsername    => _en ? 'Username'    : 'Nome de usuário';
   String get fieldUserHint    => _en ? 'e.g. john_doe' : 'ex: joao_silva';
-  String get fieldPassword    => _en ? 'Password'    : 'Senha';
-  String get fieldPasswordMin => _en ? 'Password (min. 4 chars)' : 'Senha (mín. 4 caracteres)';
-  String get fieldConfirm     => _en ? 'Confirm password' : 'Confirmar senha';
-  String get validUserEmpty   => _en ? 'Enter a username'      : 'Informe o usuário';
-  String get validUserMin     => _en ? 'Minimum 3 characters'  : 'Mínimo 3 caracteres';
-  String get validPassEmpty   => _en ? 'Enter a password'      : 'Informe a senha';
-  String get validPassMin     => _en ? 'Minimum 4 characters'  : 'Mínimo 4 caracteres';
-  String get validPassMatch   => _en ? 'Passwords do not match' : 'Senhas não conferem';
+  String get validUserEmpty   => _en ? 'Enter a name'             : 'Informe o nome';
+  String get validUserMin     => _en ? 'Minimum 3 characters'     : 'Mínimo 3 caracteres';
 
   // ── Settings screen ──────────────────────────────────────────────────────────
   String get settingsTitle          => _en ? 'Settings ⚙️'     : 'Configurações ⚙️';
@@ -331,11 +329,11 @@ class AppStrings {
   String get settingsResetSubtitle  => _en ? 'Erases all progress and returns to the pet selection screen.' : 'Apaga todo o progresso e volta à tela de escolha do pet.';
   String get settingsResetDialogContent => _en ? 'All progress will be permanently erased.\n\nAre you sure you want to continue?' : 'Todo o progresso será apagado permanentemente.\n\nTem certeza que deseja continuar?';
   String get settingsResetBtn       => _en ? 'Reset'                         : 'Reiniciar';
-  String get settingsLogoutTitle    => _en ? 'Sign out'                      : 'Sair da conta';
-  String get settingsLogoutConnectedAs => _en ? 'Signed in as'               : 'Conectado como';
-  String get settingsLogoutDialogTitle => _en ? 'Sign out?'                  : 'Sair da conta?';
-  String get settingsLogoutDialogContent => _en ? 'Your progress will be saved. You can sign in again at any time.' : 'Seu progresso permanece salvo. Você poderá entrar novamente a qualquer momento.';
-  String get settingsLogoutBtn      => _en ? 'Sign out'                      : 'Sair';
+  String get settingsLogoutTitle    => _en ? 'Switch profile'                : 'Trocar perfil';
+  String get settingsLogoutConnectedAs => _en ? 'Playing as'                 : 'Jogando como';
+  String get settingsLogoutDialogTitle => _en ? 'Switch profile?'            : 'Trocar de perfil?';
+  String get settingsLogoutDialogContent => _en ? 'Your progress will be saved. You can return at any time.' : 'Seu progresso permanece salvo. Você poderá voltar a qualquer momento.';
+  String get settingsLogoutBtn      => _en ? 'Switch'                        : 'Trocar';
 
   // ── Fainted screen ───────────────────────────────────────────────────────────
   String get faintedTitle           => _en ? 'Your pet fainted!'              : 'Seu pet desmaiou!';
